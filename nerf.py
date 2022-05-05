@@ -10,13 +10,14 @@ from torchvision import datasets, transforms, utils
 
 
 
-class Scene_fct_aproximator(nn.Sequential):
+class NeRF(nn.Sequential):
     def __init__(self):
         input_position = 60
         input_direction = 24
         output_density = 1
         output_colour = 3
         hidden_features = 256
+
         self.l1 = nn.Linear(input_position,  hidden_features)
         self.l2 = nn.Linear(hidden_features, hidden_features)
         self.l3 = nn.Linear(hidden_features, hidden_features)
@@ -33,19 +34,23 @@ class Scene_fct_aproximator(nn.Sequential):
         self.activationSigmoid = nn.Sigmoid()
 
     def forward(self, pos, dir):
+
         h1 = self.activationReLU(self.l1(pos))
         h2 = self.activationReLU(self.l2(h1))
         h3 = self.activationReLU(self.l3(h2))
         h4 = self.activationReLU(self.l4(h3))
-        h5 = self.activationReLU(self.l5(h4 + pos)) # TODO: this should be concatenation not addition 
+        h5 = self.activationReLU(self.l5(torch.cat([h4, pos]))) 
         h6 = self.activationReLU(self.l6(h5))
         h7 = self.activationReLU(self.l7(h6))
         h8 = self.l8(h7) # no activation function before layer 9
         partial_h9 = self.l9(h8)
         density = partial_h9[0]
-        h9 = self.activationReLU(partial_h9[1:] + dir) # TODO: this should be concatenation not addition 
+        h9 = self.activationReLU(torch.cat([partial_h9[1:] + dir]))
         h10 = self.activationReLU(self.l10(h9))
         colour = self.activationReLU(self.l11(h10))
-        return density,colour
+
+        return density, colour
     
-scene1 = Scene_fct_aproximator()
+fine_scene1 = NeRF()
+coarse_scene1 = NeRF()
+
